@@ -1,0 +1,18 @@
+PCB puissance : 
+		- arrosage ( rgb )
+		- clim (rgb)
+		- Volets ( 2 led monter / descendre ) 
+		- LDR + la led dimmable 
+		- capteur ultrason
+		- DHt 22
+		- LED ( Wifi / Client )
+		- LED ( MODEs : AUTO / MANU )
+		- switch on / off ( alimentation )
+
+PCB signalisation :
+		- LED ( Wifi / Client )
+		- LED ( Auto / Manu )
+		- Switch mode ( on/off )
+		- Switch on/off ( alimentation ) 
+		- OLED 
+		- ( DHT ) 
