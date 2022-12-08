@@ -1,0 +1,710 @@
+[
+    {
+        "id": "f6f2187d.f17ca8",
+        "type": "tab",
+        "label": "Flow 1",
+        "disabled": false,
+        "info": ""
+    },
+    {
+        "id": "863bae8c9ba88126",
+        "type": "mqtt in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "MQTT_TIM",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "25af6acd07aed1a0",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 290,
+        "y": 140,
+        "wires": [
+            [
+                "ee326b900ecc7b0e"
+            ]
+        ]
+    },
+    {
+        "id": "ee326b900ecc7b0e",
+        "type": "debug",
+        "z": "f6f2187d.f17ca8",
+        "name": "MQTT_TIM",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 470,
+        "y": 140,
+        "wires": []
+    },
+    {
+        "id": "5059253afc76fa6c",
+        "type": "mqtt out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "TEMP",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "25af6acd07aed1a0",
+        "x": 490,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "2e2286492abd88de",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "TEMPERATURE",
+        "payloadType": "str",
+        "x": 300,
+        "y": 300,
+        "wires": [
+            [
+                "5059253afc76fa6c"
+            ]
+        ]
+    },
+    {
+        "id": "f0fcdc0fbd029ea6",
+        "type": "ui_button",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "1f9458dad9daf13b",
+        "order": 0,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "button",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "true",
+        "payloadType": "bool",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 290,
+        "y": 480,
+        "wires": [
+            [
+                "e20b76884a751661"
+            ]
+        ]
+    },
+    {
+        "id": "e20b76884a751661",
+        "type": "mqtt out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "inTopic",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "25af6acd07aed1a0",
+        "x": 480,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "38a0f50ce3d7b093",
+        "type": "ui_button",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "1f9458dad9daf13b",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "passthru": false,
+        "label": "button2",
+        "tooltip": "",
+        "color": "",
+        "bgcolor": "",
+        "className": "",
+        "icon": "",
+        "payload": "false",
+        "payloadType": "bool",
+        "topic": "topic",
+        "topicType": "msg",
+        "x": 300,
+        "y": 540,
+        "wires": [
+            [
+                "76382feab1130a7f"
+            ]
+        ]
+    },
+    {
+        "id": "76382feab1130a7f",
+        "type": "mqtt out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "inTopic",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "25af6acd07aed1a0",
+        "x": 480,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "2f7857b549ec5603",
+        "type": "ui_gauge",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "1f9458dad9daf13b",
+        "order": 2,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "°C",
+        "format": "{{payload}}",
+        "min": 0,
+        "max": "50",
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "className": "",
+        "x": 750,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "7568b10051497df1",
+        "type": "mqtt in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "temperature",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "25af6acd07aed1a0",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 230,
+        "y": 620,
+        "wires": [
+            [
+                "2751303171e14ca2"
+            ]
+        ]
+    },
+    {
+        "id": "2751303171e14ca2",
+        "type": "change",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "rules": [
+            {
+                "t": "move",
+                "p": "payload.TEMP1",
+                "pt": "msg",
+                "to": "payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 460,
+        "y": 620,
+        "wires": [
+            [
+                "2f7857b549ec5603"
+            ]
+        ]
+    },
+    {
+        "id": "059e468a832d1351",
+        "type": "template",
+        "z": "f6f2187d.f17ca8",
+        "name": "Query",
+        "field": "topic",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": "INSERT INTO `Données`(`Temperature`,  `LDR`) VALUES (:TEMP1, :LUMINOSITE)",
+        "output": "str",
+        "x": 290,
+        "y": 800,
+        "wires": [
+            [
+                "4e4ae7b7b59b7159"
+            ]
+        ]
+    },
+    {
+        "id": "1e55adf442b2c4d0",
+        "type": "comment",
+        "z": "f6f2187d.f17ca8",
+        "name": "ENVOIE DES DONNEES VERS LA DB",
+        "info": "",
+        "x": 210,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "bd6741fdb6ae4c5c",
+        "type": "inject",
+        "z": "f6f2187d.f17ca8",
+        "name": "1min",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "60",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 940,
+        "wires": [
+            [
+                "77c4a63de052badf"
+            ]
+        ]
+    },
+    {
+        "id": "77c4a63de052badf",
+        "type": "template",
+        "z": "f6f2187d.f17ca8",
+        "name": "Query",
+        "field": "topic",
+        "fieldType": "msg",
+        "format": "handlebars",
+        "syntax": "mustache",
+        "template": "SELECT `Temperature`, `Humidite`, `Date` FROM `Données` WHERE 1",
+        "output": "str",
+        "x": 290,
+        "y": 940,
+        "wires": [
+            [
+                "e1725c1b51615202"
+            ]
+        ]
+    },
+    {
+        "id": "e99499a0a9d06e4a",
+        "type": "function",
+        "z": "f6f2187d.f17ca8",
+        "name": "State to Chart",
+        "func": "const data = [[],[]];\n\nmsg.payload.forEach((value) => {\n    data[0].push({\"x\": value.Date, \"y\": value.Temperature});\n    data[1].push({\"x\": value.Date, \"y\": value.Humidite});\n});\n\nmsg = {\n    payload: [{\n        \"series\": [\"Température [°C]\", \"Humidité [%]\"],\n        \"data\": data,\n        \"labels\": [\"\"]\n    }]\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 940,
+        "wires": [
+            [
+                "6615971824b1bb3c"
+            ]
+        ]
+    },
+    {
+        "id": "eddc766cc794b16b",
+        "type": "comment",
+        "z": "f6f2187d.f17ca8",
+        "name": "LECTURE DES DONNEES DEPUIS LA DB",
+        "info": "",
+        "x": 220,
+        "y": 880,
+        "wires": []
+    },
+    {
+        "id": "4e4ae7b7b59b7159",
+        "type": "mysql",
+        "z": "f6f2187d.f17ca8",
+        "mydb": "d1f5d4d9aa3fcd69",
+        "name": "",
+        "x": 670,
+        "y": 800,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e1725c1b51615202",
+        "type": "mysql",
+        "z": "f6f2187d.f17ca8",
+        "mydb": "d1f5d4d9aa3fcd69",
+        "name": "",
+        "x": 470,
+        "y": 940,
+        "wires": [
+            [
+                "e99499a0a9d06e4a"
+            ]
+        ]
+    },
+    {
+        "id": "6615971824b1bb3c",
+        "type": "ui_chart",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "1f9458dad9daf13b",
+        "order": 3,
+        "width": 0,
+        "height": 0,
+        "label": "chart",
+        "chartType": "line",
+        "legend": "false",
+        "xformat": "HH:mm:ss",
+        "interpolate": "linear",
+        "nodata": "",
+        "dot": false,
+        "ymin": "",
+        "ymax": "",
+        "removeOlder": 1,
+        "removeOlderPoints": "",
+        "removeOlderUnit": "3600",
+        "cutout": 0,
+        "useOneColor": false,
+        "useUTC": false,
+        "colors": [
+            "#1f77b4",
+            "#aec7e8",
+            "#ff7f0e",
+            "#2ca02c",
+            "#98df8a",
+            "#d62728",
+            "#ff9896",
+            "#9467bd",
+            "#c5b0d5"
+        ],
+        "outputs": 1,
+        "useDifferentColor": false,
+        "className": "",
+        "x": 830,
+        "y": 940,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "a58bbbd11735cfab",
+        "type": "mqtt in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "topic": "temperature",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "25af6acd07aed1a0",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 130,
+        "y": 800,
+        "wires": [
+            [
+                "059e468a832d1351"
+            ]
+        ]
+    },
+    {
+        "id": "27da5b6551d21055",
+        "type": "blynk-iot-out-write",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "pin": "2",
+        "pinmode": 0,
+        "client": "919f6b9b340fbe93",
+        "x": 480,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "512638cb6684f682",
+        "type": "ui_numeric",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "label": "numeric",
+        "tooltip": "",
+        "group": "1f9458dad9daf13b",
+        "order": 4,
+        "width": 0,
+        "height": 0,
+        "wrap": false,
+        "passthru": true,
+        "topic": "topic",
+        "topicType": "msg",
+        "format": "{{value}}",
+        "min": 0,
+        "max": "1024",
+        "step": 1,
+        "className": "",
+        "x": 260,
+        "y": 80,
+        "wires": [
+            [
+                "27da5b6551d21055"
+            ]
+        ]
+    },
+    {
+        "id": "88e2bb504d553e6c",
+        "type": "firebase-out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "database": "ec513a1f0495bd9e",
+        "path": "/signalisation/bp/bp1",
+        "pathType": "str",
+        "queryType": "set",
+        "x": 480,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "6cfe5b176e0b892b",
+        "type": "ui_text_input",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "label": "",
+        "tooltip": "",
+        "group": "1f9458dad9daf13b",
+        "order": 5,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "mode": "text",
+        "delay": 300,
+        "topic": "topic",
+        "sendOnBlur": true,
+        "className": "",
+        "topicType": "msg",
+        "x": 280,
+        "y": 420,
+        "wires": [
+            [
+                "88e2bb504d553e6c"
+            ]
+        ]
+    },
+    {
+        "id": "2250ae54ce1ea1ba",
+        "type": "firebase-out",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "database": "b2eeebe0313c43b2",
+        "path": "signalisation/bp/bp2",
+        "pathType": "str",
+        "queryType": "set",
+        "x": 480,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "d84074407810cb6a",
+        "type": "ui_slider",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "label": "slider",
+        "tooltip": "",
+        "group": "1f9458dad9daf13b",
+        "order": 6,
+        "width": 0,
+        "height": 0,
+        "passthru": true,
+        "outs": "all",
+        "topic": "topic",
+        "topicType": "msg",
+        "min": 0,
+        "max": 10,
+        "step": 1,
+        "className": "",
+        "x": 270,
+        "y": 360,
+        "wires": [
+            [
+                "2250ae54ce1ea1ba"
+            ]
+        ]
+    },
+    {
+        "id": "6c0bb2bbeffe9e32",
+        "type": "firebase-in",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "database": "5a47b327e8f7deeb",
+        "outputType": "auto",
+        "path": "signalisation/bp/bp2",
+        "x": 260,
+        "y": 240,
+        "wires": [
+            [
+                "7a259aaae457c029"
+            ]
+        ]
+    },
+    {
+        "id": "7a259aaae457c029",
+        "type": "ui_gauge",
+        "z": "f6f2187d.f17ca8",
+        "name": "",
+        "group": "1f9458dad9daf13b",
+        "order": 7,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "gauge",
+        "label": "units",
+        "format": "{{value}}",
+        "min": 0,
+        "max": 10,
+        "colors": [
+            "#00b500",
+            "#e6e600",
+            "#ca3838"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "className": "",
+        "x": 450,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "25af6acd07aed1a0",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "10.22.1.176",
+        "port": "1883",
+        "clientid": "",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "1f9458dad9daf13b",
+        "type": "ui_group",
+        "name": "BPBLYNK",
+        "tab": "beb3f3aae0cdb240",
+        "order": 1,
+        "disp": true,
+        "width": "6",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "d1f5d4d9aa3fcd69",
+        "type": "MySQLdatabase",
+        "name": "",
+        "host": "10.22.1.176",
+        "port": "3306",
+        "db": "db_nodered",
+        "tz": "",
+        "charset": "UTF8"
+    },
+    {
+        "id": "919f6b9b340fbe93",
+        "type": "blynk-iot-client",
+        "name": "",
+        "path": "blynk.cloud",
+        "key": "BKj7d7LNUjBounCH0wzMH4x6aCAIWfgs",
+        "tmpl": "TMPLdgNvmLUn",
+        "dbg_all": false,
+        "dbg_read": false,
+        "dbg_prop": false,
+        "dbg_sync": false,
+        "dbg_low": false,
+        "dbg_pins": "",
+        "multi_cmd": false,
+        "enabled": true
+    },
+    {
+        "id": "ec513a1f0495bd9e",
+        "type": "database-config",
+        "name": "My Database",
+        "authType": "anonymous"
+    },
+    {
+        "id": "b2eeebe0313c43b2",
+        "type": "database-config",
+        "name": "My Database",
+        "authType": "anonymous"
+    },
+    {
+        "id": "5a47b327e8f7deeb",
+        "type": "database-config",
+        "name": "My Database",
+        "authType": "anonymous"
+    },
+    {
+        "id": "beb3f3aae0cdb240",
+        "type": "ui_tab",
+        "name": "Home",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
