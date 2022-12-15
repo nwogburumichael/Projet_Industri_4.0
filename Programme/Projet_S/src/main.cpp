@@ -8,6 +8,15 @@
 #include <Firebase_ESP_Client.h>
 #include <Adafruit_NeoPixel.h>
 
+// JSON
+String output;
+DynamicJsonDocument doc2(96);
+
+//FREE RTOS VAR 
+TaskHandle_t Task0;
+TaskHandle_t Task1;
+SemaphoreHandle_t semaphore;
+
 //Provide the token generation process info.
 #include "addons/TokenHelper.h"
 //Provide the RTDB payload printing info and other helper functions.
@@ -16,12 +25,13 @@
 // Insert your network credentials
 #define WIFI_SSID "LAPTOP_T"
 #define WIFI_PASSWORD "TIMON123"
+#define WiFi_TIMEOUT_MS 20000
 const char* ssid = "LAPTOP_T";
 const char* password = "TIMON123";
 
 // Insert Firebase project API Key
-#define API_KEY "AIzaSyBAq3wQ0PUtwS3-O1IRf3Lg5aErtic1xFo"
-#define DATABASE_URL "https://tp8firebase-default-rtdb.europe-west1.firebasedatabase.app/" 
+#define API_KEY "AIzaSyBrppHxmgeqeBasciYEABjP5C67FLtyRbE"
+#define DATABASE_URL "https://projet-serre-e7a00-default-rtdb.europe-west1.firebasedatabase.app/"
 
 // Variable PIN
 #define PINLED 2
@@ -40,7 +50,7 @@ FirebaseConfig config;
 DHT dht(DHTpin, DHT11);
 
 //MQTT server
-const char* mqtt_server = "10.22.2.42";
+const char* mqtt_server = "10.22.1.252";
 WiFiClient espClient;
 PubSubClient client(espClient);
 unsigned long lastMsg = 0;
@@ -55,31 +65,112 @@ unsigned long sendDataPrevMillis = 0;
 int count = 0;
 bool signupOK = false;
 volatile bool dataChanged = false;
+int compteur = 0;
+/*---------------------BEGIN FREE RTOS TACHES-------------------*/
+void loop0(void * parameter) {
+	for (;;) {
+		// Serial.print("Running on core: ");
+		// Serial.println(xPortGetCoreID());
+    
+    delay(5000);
+    Serial.println("GIVE");
+    compteur++;
+		xSemaphoreGive(semaphore);
+	}
+}
 
-/*-------------------------BEGIN MQTT---------------------------*/
-void setup_wifi() {
+void loop1(void * parameter) {
+	for (;;) {
+		// Serial.print("\t\t\tRunning on core: ");
+		// Serial.println(xPortGetCoreID());
+    
+		xSemaphoreTake(semaphore, portMAX_DELAY);
+    Serial.println("take");
+    delay(1000);
+    Serial.println(compteur);
+	}
+}
 
-  delay(10);
-  // We start by connecting to a WiFi network
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
+void WifiConnect(void * parameter) {
+	for (;;) {
 
+    if(WiFi.status() == WL_CONNECTED){
+      Serial.println("wifi still connexted");
+      vTaskDelay(10000/ portTICK_PERIOD_MS);
+      continue;
+    }
+
+  Serial.println("wifi connection");
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  unsigned long startAttemptTime = millis();
+
+  while (WiFi.status() != WL_CONNECTED && 
+        millis() -startAttemptTime < WiFi_TIMEOUT_MS){}
+  if(WiFi.status() != WL_CONNECTED){
+    Serial.println("[wifi] FAILED");
+    vTaskDelay(20000/ portTICK_PERIOD_MS);
+    continue;
   }
-
-  randomSeed(micros());
-
-  Serial.println("");
-  Serial.println("WiFi connected");
-  Serial.println("IP address: ");
-  Serial.println(WiFi.localIP());
+  Serial.println("[WIFI] Connected: " + WiFi.localIP());
+	}
 }
+
+void MqttConnect(void * parameter) {
+	for (;;) {
+  while (!client.connected()) {
+    Serial.print("Attempting MQTT connection...");
+    // Create a random client ID
+    String clientId = "ESP32Client-";
+    clientId += String(random(0xffff), HEX);
+    // Attempt to connect
+    if (client.connect(clientId.c_str())) {
+      Serial.println("connected");
+      // Once connected, publish an announcement...
+      client.publish("outTopic", "hello world");
+      // ... and resubscribe
+      client.subscribe("inTopic");
+    } else {
+      Serial.print("failed, rc=");
+      Serial.print(client.state());
+      Serial.println(" try again in 5 seconds");
+      // Wait 5 seconds before retrying
+      delay(5000);
+    }
+  }
+	}
+}
+
+
+
+
+/*---------------------END FREE RTOS TACHES-------------------*/
+
+/*-------------------------BEGIN MQTT---------------------------*/
+// void setup_wifi() {
+
+//   delay(10);
+//   // We start by connecting to a WiFi network
+//   Serial.println();
+//   Serial.print("Connecting to ");
+//   Serial.println(ssid);
+
+//   WiFi.mode(WIFI_STA);
+//   WiFi.begin(ssid, password);
+
+//   while (WiFi.status() != WL_CONNECTED) {
+//     delay(500);
+//     Serial.print(".");
+//   }
+
+//   randomSeed(micros());
+
+//   Serial.println("");
+//   Serial.println("WiFi connected");
+//   Serial.println("IP address: ");
+//   Serial.println(WiFi.localIP());
+// }
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -106,32 +197,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
     else if(messageTemp == "false"){
       digitalWrite(PINLED, LOW);  // Turn the LED off by making the voltage HIGH
   }
-
 }
 }
 
 void reconnect() {
   // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
-      client.subscribe("inTopic");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
 }
 /*-------------------------END MQTT---------------------------*/
 
@@ -195,6 +265,13 @@ void streamTimeoutCallback(bool timeout)
 
 void setup(){
   Serial.begin(115200);
+  // Initialisation of JSON Derulo Object
+  doc2["HUM"] = "90";
+  doc2["TEMP"] = "22";
+  doc2["HAUTEUR"] = "56";
+  doc2["LUM"] = "23";
+
+  Serial.println(xPortGetCoreID());
 
   /*Initialisation des PIN*/
   pinMode(led1,OUTPUT);
@@ -202,7 +279,6 @@ void setup(){
   pinMode(bp,INPUT);
   
   /*Connexion Wifi*/
-  setup_wifi();
   dht.begin();
 
   /*------------BEGIN MQTT SETUP--------------*/
@@ -236,14 +312,60 @@ void setup(){
   json.add("led2", "Off");
   Serial.printf("Set json... %s\n\n", Firebase.RTDB.setJSON(&fbdo, "/Signalisation/stream/data/json", &json) ? "ok" : fbdo.errorReason().c_str());
   // test  
-  /*---------------END IREBASE SETUP----------------*/
+  /*---------------END FIREBASE SETUP----------------*/
+
+  /*-------------Begin setup RTOS--------------*/
+  semaphore = xSemaphoreCreateBinary();
+
+	xTaskCreatePinnedToCore(
+			loop0, /* Function to implement the task */
+			"Task0", /* Name of the task */
+			1000, /* Stack size in words */
+			NULL, /* Task input parameter */
+			0, /* Priority of the task */
+			&Task0, /* Task handle. */
+			0); /* Core where the task should run */
+  Serial.println("Setup completed.");
+
+	xTaskCreatePinnedToCore(
+			loop1, /* Function to implement the task */
+			"Task1", /* Name of the task */
+			1000, /* Stack size in words */
+			NULL, /* Task input parameter */
+			0, /* Priority of the task */
+			&Task1, /* Task handle. */
+			0); /* Core where the task should run */
+	Serial.println("Setup completed.");
+
+	xTaskCreatePinnedToCore(
+			WifiConnect, /* Function to implement the task */
+			"Taskwifi", /* Name of the task */
+			5000, /* Stack size in words */
+			NULL, /* Task input parameter */
+			0, /* Priority of the task */
+			NULL, /* Task handle. */
+			1); /* Core where the task should run */
+	Serial.println("Setup completed.");
+
+	xTaskCreatePinnedToCore(
+			MqttConnect, /* Function to implement the task */
+			"TaskMqtt", /* Name of the task */
+			5000, /* Stack size in words */
+			NULL, /* Task input parameter */
+			0, /* Priority of the task */
+			NULL, /* Task handle. */
+			2); /* Core where the task should run */
+	Serial.println("Setup completed.");
+  /*------------------End setup RTOS--------------*/
 }
 
 
 void loop(){
-
-  if (!client.connected()) { // faire une taches pour la reconnexion
-    reconnect();
-  }
+  // if (!client.connected()) { // faire une taches pour la reconnexion du serveur mqtt
+  //   reconnect();
+  // }
   client.loop();
+  serializeJson(doc2, output);
+  client.publish("donnees",output.c_str()); // TEST
+  delay(2000);
 }
