@@ -13,8 +13,8 @@ String output;
 DynamicJsonDocument doc2(96);
 
 //FREE RTOS VAR 
-TaskHandle_t Task0;
-TaskHandle_t Task1;
+TaskHandle_t TaskAuto;
+TaskHandle_t TaskManu;
 SemaphoreHandle_t semaphore;
 
 //Provide the token generation process info.
@@ -23,11 +23,9 @@ SemaphoreHandle_t semaphore;
 #include "addons/RTDBHelper.h"
 
 // Insert your network credentials
-#define WIFI_SSID "LAPTOP_T"
-#define WIFI_PASSWORD "TIMON123"
 #define WiFi_TIMEOUT_MS 20000
-const char* ssid = "LAPTOP_T";
-const char* password = "TIMON123";
+const char* ssid = "mike";
+const char* password = "Nwogburu234";
 
 // Insert Firebase project API Key
 #define API_KEY "AIzaSyBrppHxmgeqeBasciYEABjP5C67FLtyRbE"
@@ -58,7 +56,6 @@ unsigned long lastMsg = 0;
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
 
-
 String valeurLed ="";
 
 unsigned long sendDataPrevMillis = 0;
@@ -67,28 +64,59 @@ bool signupOK = false;
 volatile bool dataChanged = false;
 int compteur = 0;
 /*---------------------BEGIN FREE RTOS TACHES-------------------*/
-void loop0(void * parameter) {
-	for (;;) {
-		// Serial.print("Running on core: ");
-		// Serial.println(xPortGetCoreID());
-    
-    delay(5000);
-    Serial.println("GIVE");
-    compteur++;
-		xSemaphoreGive(semaphore);
-	}
-}
 
-void loop1(void * parameter) {
-	for (;;) {
-		// Serial.print("\t\t\tRunning on core: ");
-		// Serial.println(xPortGetCoreID());
-    
-		xSemaphoreTake(semaphore, portMAX_DELAY);
-    Serial.println("take");
+/*----------------TACHE Manager-----------------*/
+void TaskManager(void *argp) {
+  
+  for (;;) {
+
+    // delay(2000);
+    // vTaskSuspend(TaskAuto);
+    // vTaskResume(TaskManu);
+    Serial.print("MANAGER");
     delay(1000);
-    Serial.println(compteur);
-	}
+    // vTaskSuspend(TaskManu);
+    // vTaskResume(TaskAuto);
+    }
+ }
+
+/*----------------TACHE ModeAuto-----------------*/
+void ModeAuto(void *argp) {
+  for (;;) { 
+    Serial.print("Auto");
+    delay(500);
+    } 
+ }
+
+/*----------------TACHE ModeManu-----------------*/
+void ModeManu(void *argp) {
+  for (;;) {  
+    Serial.print("Manu");
+    delay(500);
+  } 
+ }
+
+/*---------------------TASK CORE 1-------------------*/
+void reconnect() {
+ while (!client.connected()) {
+  Serial.print("Attempting MQTT connection...");
+
+  // Attempt to connect
+  if (client.connect("Client")) {
+    Serial.println("connected");
+    // Once connected, publish an announcement...
+    client.publish("outTopic", "hello world");
+    // ... and resubscribe
+    client.subscribe("inTopic");
+  } 
+  else {
+    Serial.print("failed, rc=");
+    Serial.print(client.state());
+    Serial.println(" try again in 5 seconds");
+    // Wait 5 seconds before retrying
+    delay(5000);
+  }
+ }
 }
 
 void WifiConnect(void * parameter) {
@@ -114,63 +142,15 @@ void WifiConnect(void * parameter) {
     continue;
   }
   Serial.println("[WIFI] Connected: " + WiFi.localIP());
+  //METTRE UN SEMAPHORE
+  reconnect();
 	}
 }
-
-void MqttConnect(void * parameter) {
-	for (;;) {
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = "ESP32Client-";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
-      client.subscribe("inTopic");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
-	}
-}
-
-
-
 
 /*---------------------END FREE RTOS TACHES-------------------*/
 
 /*-------------------------BEGIN MQTT---------------------------*/
-// void setup_wifi() {
 
-//   delay(10);
-//   // We start by connecting to a WiFi network
-//   Serial.println();
-//   Serial.print("Connecting to ");
-//   Serial.println(ssid);
-
-//   WiFi.mode(WIFI_STA);
-//   WiFi.begin(ssid, password);
-
-//   while (WiFi.status() != WL_CONNECTED) {
-//     delay(500);
-//     Serial.print(".");
-//   }
-
-//   randomSeed(micros());
-
-//   Serial.println("");
-//   Serial.println("WiFi connected");
-//   Serial.println("IP address: ");
-//   Serial.println(WiFi.localIP());
-// }
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -200,15 +180,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 }
 
-void reconnect() {
-  // Loop until we're reconnected
-}
+
 /*-------------------------END MQTT---------------------------*/
 
 void actualisation(String chemin,String valeur){
 
-  // if(String(chemin) == "/json/led1"){Serial.print("premiere condition verifier");}
-  // if(String(valeur.c_str()) == "on"){Serial.println("Deuxieme condition verifier");}
   if(String(chemin) == "/json/led1" && String(valeur) == "on"){
     Serial.printf("LED1 allumé %s",valeur);
     digitalWrite(led1,HIGH);
@@ -240,16 +216,9 @@ void streamCallback(FirebaseStream data){
   Serial.println();
   actualisation(data.dataPath(),data.to<String>());
 
-  // This is the size of stream payload received (current and max value)
-  // Max payload size is the payload size under the stream path since the stream connected
-  // and read once and will not update until stream reconnection takes place.
-  // This max value will be zero as no payload received in case of ESP8266 which
-  // BearSSL reserved Rx buffer size is less than the actual stream payload.
   Serial.printf("Received stream payload size: %d (Max. %d)\n\n", data.payloadLength(), data.maxPayloadLength());
-
-  // Due to limited of stack memory, do not perform any task that used large memory here especially starting connect to server.
-  // Just set this flag and check it status later.
   dataChanged = true;
+
 }
 
 void streamTimeoutCallback(bool timeout)
@@ -277,9 +246,53 @@ void setup(){
   pinMode(led1,OUTPUT);
   pinMode(led2,OUTPUT);
   pinMode(bp,INPUT);
-  
-  /*Connexion Wifi*/
+
   dht.begin();
+
+  /*-------------Begin setup RTOS--------------*/
+
+	xTaskCreatePinnedToCore(
+		ModeManu, /* Function to implement the task */
+		"TaskManu", /* Name of the task */
+		5000, /* Stack size in words */
+		NULL, /* Task input parameter */
+		0, /* Priority of the task */
+		&TaskManu, /* Task handle. */
+		0); /* Core where the task should run */
+
+	xTaskCreatePinnedToCore(
+		ModeAuto, /* Function to implement the task */
+		"TaskAuto", /* Name of the task */
+		5000, /* Stack size in words */
+		NULL, /* Task input parameter */
+		0, /* Priority of the task */
+		&TaskAuto, /* Task handle. */
+		0); /* Core where the task should run */
+	
+//TASK CORE 1
+  xTaskCreatePinnedToCore(
+    TaskManager, // Function
+    "taskBp", // Task name
+    5000, // Stack size (void*)LED1_GPIO, // arg
+    NULL, // arg
+    0, // Priority
+    NULL, // No handle returned
+    1); // CPU
+
+	xTaskCreatePinnedToCore(
+		WifiConnect, /* Function to implement the task */
+		"Taskwifi", /* Name of the task */
+		5000, /* Stack size in words */
+		NULL, /* Task input parameter */
+		0, /* Priority of the task */
+		NULL, /* Task handle. */
+		1); /* Core where the task should run */
+
+  vTaskSuspend(TaskManu);
+  vTaskSuspend(TaskAuto);
+
+	Serial.println("Setup completed.");
+  /*------------------End setup RTOS--------------*/
 
   /*------------BEGIN MQTT SETUP--------------*/
   client.setServer(mqtt_server, 1883);
@@ -302,70 +315,25 @@ void setup(){
     Serial.printf("sream begin error, %s\n\n", stream.errorReason().c_str());
 
   Firebase.RTDB.setStreamCallback(&stream, streamCallback, streamTimeoutCallback);
-  
   Firebase.begin(&config, &auth);
   Firebase.reconnectWiFi(true);
-  // test
-  count++;
-  FirebaseJson json;
-  json.add("led1", "Off");
-  json.add("led2", "Off");
-  Serial.printf("Set json... %s\n\n", Firebase.RTDB.setJSON(&fbdo, "/Signalisation/stream/data/json", &json) ? "ok" : fbdo.errorReason().c_str());
-  // test  
+  // test debut
+  // count++;
+  // FirebaseJson json;
+  // json.add("led1", "Off");
+  // json.add("led2", "Off");
+  // Serial.printf("Set json... %s\n\n", Firebase.RTDB.setJSON(&fbdo, "/Signalisation/stream/data/json", &json) ? "ok" : fbdo.errorReason().c_str());
+  // test fin 
+
   /*---------------END FIREBASE SETUP----------------*/
-
-  /*-------------Begin setup RTOS--------------*/
-  semaphore = xSemaphoreCreateBinary();
-
-	xTaskCreatePinnedToCore(
-			loop0, /* Function to implement the task */
-			"Task0", /* Name of the task */
-			1000, /* Stack size in words */
-			NULL, /* Task input parameter */
-			0, /* Priority of the task */
-			&Task0, /* Task handle. */
-			0); /* Core where the task should run */
-  Serial.println("Setup completed.");
-
-	xTaskCreatePinnedToCore(
-			loop1, /* Function to implement the task */
-			"Task1", /* Name of the task */
-			1000, /* Stack size in words */
-			NULL, /* Task input parameter */
-			0, /* Priority of the task */
-			&Task1, /* Task handle. */
-			0); /* Core where the task should run */
-	Serial.println("Setup completed.");
-
-	xTaskCreatePinnedToCore(
-			WifiConnect, /* Function to implement the task */
-			"Taskwifi", /* Name of the task */
-			5000, /* Stack size in words */
-			NULL, /* Task input parameter */
-			0, /* Priority of the task */
-			NULL, /* Task handle. */
-			1); /* Core where the task should run */
-	Serial.println("Setup completed.");
-
-	xTaskCreatePinnedToCore(
-			MqttConnect, /* Function to implement the task */
-			"TaskMqtt", /* Name of the task */
-			5000, /* Stack size in words */
-			NULL, /* Task input parameter */
-			0, /* Priority of the task */
-			NULL, /* Task handle. */
-			2); /* Core where the task should run */
-	Serial.println("Setup completed.");
-  /*------------------End setup RTOS--------------*/
 }
 
 
 void loop(){
-  // if (!client.connected()) { // faire une taches pour la reconnexion du serveur mqtt
-  //   reconnect();
-  // }
   client.loop();
-  serializeJson(doc2, output);
-  client.publish("donnees",output.c_str()); // TEST
-  delay(2000);
+  delay(500);
+  // serializeJson(doc2, output);
+  // client.publish("donnees",output.c_str()); // TEST
+ 
+
 }
