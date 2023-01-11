@@ -33,6 +33,10 @@ const char* password = "Nwogburu234";
 
 // Variable PIN
 #define PINLED 2
+#define PINLEDVOLETSHAUT 13
+#define PINLEDVOLETSBAS 12
+#define PINLEDLDR 27
+#define PINLDR 14 
 #define DHTpin 26
 #define led1 14
 #define led2 15
@@ -46,6 +50,34 @@ FirebaseConfig config;
 
 //Define DHT object
 DHT dht(DHTpin, DHT11);
+
+//point de consignes
+
+int tempconsigne;
+int humiconsigne;
+int lumiconsigne;
+int nbrarrosage;
+int modemanu;
+
+//variable actuel
+
+int tempactu;
+int humiactu;
+int lumiactu;
+int volethaut; 
+int voletbas ;
+int arrosage ;
+
+//variable pour mode auto
+int tempManu;
+int humiManu;
+int lumiManu;
+int volethautManu; 
+int voletbasManu ;
+int arrosageManu ;
+
+//flag
+int positionVolethaut = 0; 
 
 //MQTT server
 const char* mqtt_server = "10.22.1.252";
@@ -82,7 +114,37 @@ void TaskManager(void *argp) {
 
 /*----------------TACHE ModeAuto-----------------*/
 void ModeAuto(void *argp) {
-  for (;;) { 
+  for (;;) {
+//fonction luminosité
+  if (lumiconsigne >= 70 && positionVolethaut != 1 ) {
+    digitalWrite(PINLEDVOLETSHAUT,HIGH);
+    delayMicroseconds(3000);
+    digitalWrite(PINLEDVOLETSHAUT,LOW);
+    analogWrite(PINLEDLDR,255);
+    positionVolethaut = 1;
+
+  }
+  else if (lumiconsigne >= 70 && positionVolethaut == 1 ) {
+    analogWrite(PINLEDLDR,255);
+  }
+
+
+  else if (lumiconsigne < 70 && positionVolethaut != 1) {
+
+    analogWrite(PINLEDLDR,map(lumiconsigne,0,100,0,255));
+  }
+
+  else if (lumiconsigne < 70 && positionVolethaut == 1) {
+    digitalWrite(PINLEDVOLETSBAS,HIGH);
+    delayMicroseconds(3000);
+    digitalWrite(PINLEDVOLETSBAS,LOW);
+    analogWrite(PINLEDLDR,map(lumiconsigne,0,100,0,255));
+    positionVolethaut = 0;
+  }
+
+  //fonction température
+  
+
     Serial.print("Auto");
     delay(500);
     } 
@@ -185,24 +247,80 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 void actualisation(String chemin,String valeur){
 
-  if(String(chemin) == "/json/led1" && String(valeur) == "on"){
-    Serial.printf("LED1 allumé %s",valeur);
-    digitalWrite(led1,HIGH);
+
+  if(String(chemin) == "/main/fruit"){
+    switch (tolower(valeur[0])){
+      case 'f' :
+      tempconsigne = 20 ;
+      humiconsigne = 50 ;
+      lumiconsigne = 100 ;
+      nbrarrosage = 2 ;
+      // point de consignes
+      case 'k' :
+      tempconsigne = 27 ;
+      humiconsigne = 75 ;
+      lumiconsigne = 80 ;
+      nbrarrosage = 1 ;
+      // points de consignes
+      case 'c' :
+      tempconsigne = 15 ;
+      humiconsigne = 30 ;
+      lumiconsigne = 35 ;
+      nbrarrosage = 1 ;
+
+    }
   }
-  else if(String(chemin) == "/json/led1" && String(valeur) == "off"){
-     Serial.printf("LED1 eteint%s",valeur);
-    digitalWrite(led1,LOW);
+  //reception mode 
+  if(String(chemin) == "/main/parametre/modemanu" && String(valeur)== "true"){ 
+    modemanu = 1; 
+  }
+  else if (String(chemin) == "/main/parametre/modemanu" && String(valeur)== "false"){
+    modemanu = 0;
   }
 
-  if(String(chemin) == "/json/led2" && String(valeur) == "on"){
-    Serial.printf("LED2 allumé %s",valeur);
-    digitalWrite(led2,HIGH);
+  //prise des valeurs en mode manu
+
+  if (String(chemin) == "/main/parametre/manu/temperature") {
+    tempManu = String(valeur).toInt() ;
+  } 
+
+  if (String(chemin) == "/main/parametre/manu/humidite") { 
+    humiManu = String(valeur).toInt();
+  } 
+
+  if (String(chemin) == "/main/parametre/manu/luminosite") {
+    lumiManu = String(valeur).toInt();
   }
-  else if(String(chemin) == "/json/led2" && String(valeur) == "off"){
-     Serial.printf("LED2 eteint%s",valeur);
-    digitalWrite(led2,LOW);
+
+  if (String(chemin) == "/main/parametre/manu/volets/haut" && String(valeur)== "true") {
+    volethautManu = 1;
+    
   }
-}
+  else if (String(chemin) == "/main/parametre/manu/volets/haut" && String(valeur)== "false"){
+    volethautManu = 0;
+    
+  }
+
+  if (String(chemin) == "/main/parametre/manu/volets/bas" && String(valeur)== "true"){
+    voletbasManu =1 ;
+  }
+  else if (String(chemin) == "/main/parametre/manu/volets/bas" && String(valeur)== "false"){
+    voletbasManu =0 ;
+  }
+
+  if (String(chemin) == "/main/parametre/manu/arrosage" && String(valeur)== "true"){
+    arrosageManu = 1 ;
+  }
+
+  else if  (String(chemin) == "/main/parametre/manu/arrosage" && String(valeur)== "false"){
+    arrosageManu = 0;
+  }
+
+  //commande manu
+ 
+
+  
+
 
 /*----------------------------------- BEGIN FIREBASE--------------------------------*/
 // La fonction est appelé a chaque variation de la base de données dans FIREBASE
@@ -243,9 +361,10 @@ void setup(){
   Serial.println(xPortGetCoreID());
 
   /*Initialisation des PIN*/
-  pinMode(led1,OUTPUT);
-  pinMode(led2,OUTPUT);
-  pinMode(bp,INPUT);
+  pinMode(PINLEDVOLETSBAS,OUTPUT);
+  pinMode(PINLEDVOLETSHAUT,OUTPUT);
+  pinMode(PINLEDLDR,OUTPUT);
+  pinMode(PINLDR,INPUT);
 
   dht.begin();
 
