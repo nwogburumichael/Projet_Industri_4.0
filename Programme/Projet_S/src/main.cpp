@@ -41,6 +41,13 @@ const char* password = "Nwogburu234";
 #define led1 14
 #define led2 15
 #define bp 12
+//pin rgb
+#define RED 25
+#define Blue 27
+
+//pinhumi
+#define LEDHUMI 4
+#define LEDSEC 15
 
 // Define Firebase Data object
 FirebaseData stream;
@@ -49,7 +56,7 @@ FirebaseAuth auth;
 FirebaseConfig config;
 
 //Define DHT object
-DHT dht(DHTpin, DHT11);
+DHT dht(DHTpin, DHT22);
 
 //point de consignes
 
@@ -143,7 +150,70 @@ void ModeAuto(void *argp) {
   }
 
   //fonction température
-  
+  //chauffer
+  if (tempactu < tempconsigne){
+    int difftempchaud = tempconsigne - tempactu;
+    analogWrite(RED,map(difftempchaud,0,30,0,255));
+    
+    /*if (difftemp< 5){
+      analogWrite(RED,80);
+    }
+
+    else if (5<difftemp< 10){
+      analogWrite(RED,160);
+    }
+
+    else if (10 < difftemp){
+      analogWrite(RED,240);
+    }
+
+    else if (difftemp == 0){
+      analogWrite(RED,0);
+    }*/
+
+    tempactu += tempactu;
+    delayMicroseconds(200);
+  }
+
+  //refroidir
+  else if (tempactu > tempconsigne){
+    int difftempfroid = tempactu - tempconsigne;
+    analogWrite(Blue,map(difftempfroid,0,30,0,255));
+    /*if (difftemp > -5){
+      analogWrite(Blue,80);
+    }
+
+    else if (-5> difftemp >-10){
+      analogWrite(Blue,160);
+    }
+    else if (-10 > difftemp){
+      analogWrite(Blue,240);
+    }
+    else if (difftemp == 0){
+      analogWrite(Blue,0);
+    }*/
+    tempactu -= tempactu;
+    delayMicroseconds(200);
+  }
+
+  //fonction humidificateur
+  if (humiactu < humiconsigne){
+    int diffhumi = humiconsigne - humiactu;
+    analogWrite(LEDHUMI,map(diffhumi,0,100,0,255));
+    humiactu += humiactu ;
+    delayMicroseconds(350);
+  }
+  //secher
+  else if (humiactu > humiconsigne){
+    int diffhumisec = humiactu - humiconsigne;
+    analogWrite(LEDSEC,map(diffhumisec,0,100,0,255));
+    humiactu -= humiactu ;
+    delayMicroseconds(350);
+  }
+
+
+  //arrosage 
+
 
     Serial.print("Auto");
     delay(500);
@@ -153,8 +223,44 @@ void ModeAuto(void *argp) {
 /*----------------TACHE ModeManu-----------------*/
 void ModeManu(void *argp) {
   for (;;) {  
-    Serial.print("Manu");
+    //gestion lumi
+    analogWrite(PINLEDLDR,map(lumiManu,0,100,0,255));
+    //gestion temp
+    //chauffer
+    analogWrite(RED,map(tempManu,15,30,0,245));
+    //refroidir
+    analogWrite(Blue,map(tempManu,14,0,0,245));
+
+    //gestion humi
+    //humidife
+    analogWrite(LEDHUMI,map(humiManu,50,100,0,245));
+    //secher
+    analogWrite(LEDSEC,map(humiManu,0,49,0,245));
+    
+
+    //
+    if (volethautManu == 1 && positionVolethaut !=1){
+      analogWrite(PINLEDVOLETSHAUT,HIGH);
+      delay(3000);
+      analogWrite(PINLEDVOLETSHAUT,LOW);
+      positionVolethaut = 1 ;
+    }
+    else if (volethautManu == 1 && positionVolethaut !=0){
+      //ecrire que le volet est deja en position haut
+    }
+
+    if (voletbasManu == 1 && positionVolethaut != 1){
+      //ecrire que le volet est deja en position bas
+    }
+
+    else if (voletbasManu == 1 && positionVolethaut != 0){
+      analogWrite(PINLEDVOLETSBAS,HIGH);
+      delay(3000);
+      analogWrite(PINLEDVOLETSBAS,LOW);
+      positionVolethaut = 0;
+    }
     delay(500);
+    Serial.print("Manu");
   } 
  }
 
@@ -315,7 +421,7 @@ void actualisation(String chemin,String valeur){
   else if  (String(chemin) == "/main/parametre/manu/arrosage" && String(valeur)== "false"){
     arrosageManu = 0;
   }
-
+}
   //commande manu
  
 
@@ -364,10 +470,17 @@ void setup(){
   pinMode(PINLEDVOLETSBAS,OUTPUT);
   pinMode(PINLEDVOLETSHAUT,OUTPUT);
   pinMode(PINLEDLDR,OUTPUT);
+  pinMode(RED,OUTPUT);
+  pinMode(Blue,OUTPUT);
+  pinMode(LEDHUMI,OUTPUT);
+  pinMode(LEDSEC,OUTPUT);
   pinMode(PINLDR,INPUT);
 
-  dht.begin();
 
+  dht.begin();
+  tempactu = dht.readTemperature();
+  humiactu = int(dht.readHumidity());
+  
   /*-------------Begin setup RTOS--------------*/
 
 	xTaskCreatePinnedToCore(
