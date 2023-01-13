@@ -33,17 +33,18 @@ SemaphoreHandle_t semaphore;
 #define DATABASE_URL "https://projet-serre-e7a00-default-rtdb.europe-west1.firebasedatabase.app/"
 
 // Variable PIN
-#define PINLED 2
-#define PINLEDVOLETSHAUT 13
-#define PINLEDVOLETSBAS 12
-#define PINLEDLDR 27
-#define PINLDR 14 
+
+#define PINLEDWIFI 2
+#define PINLEDVOLETSHAUT 12
+#define PINLEDVOLETSBAS 32
+#define PINLEDLDR 25
+#define PINLDR 34 
 #define DHTpin 26
-#define led1 14
-#define led2 15
-#define bp 12
+#define LedAuto 14
+#define LedManu 33
+#define LedClient 0
 //pin rgb
-#define RED 25
+#define RED 13
 #define Blue 27
 
 //pinhumi
@@ -65,13 +66,13 @@ int tempconsigne;
 int humiconsigne;
 int lumiconsigne;
 int nbrarrosage;
-int modemanu;
+int modemanu = 0;
 
 //variable actuel
 
-int tempactu;
-int humiactu;
-int lumiactu;
+float tempactu = 19;
+float humiactu = 55;
+long lumiactu = 40;
 int volethaut; 
 int voletbas ;
 int arrosage ;
@@ -82,13 +83,15 @@ int humiManu;
 int lumiManu;
 int volethautManu; 
 int voletbasManu ;
-int arrosageManu ;
+int arrosageManu = 3 ;
 int lumivolet = 80;
-int i;
+int u = 0;
+
 
 //flag
 int positionVolethaut = 0; 
 bool taskGlobal;
+bool flagarr;
 //MQTT server
 const char* mqtt_server = "192.168.43.128";
 WiFiClient espClient;
@@ -110,6 +113,7 @@ void actualisation(String topic,String messageTemp){
 
   Serial.print("JE SUIS DANS laCTU");
   if(String(topic) == "FruitTopic"){
+    flagarr = true;
     Serial.print("JE SUIS DANS FRUITOPIC");
     Serial.print(messageTemp);
     //fraise
@@ -121,6 +125,7 @@ void actualisation(String topic,String messageTemp){
       lumiconsigne = 100 ;
       nbrarrosage = 2 ;
       Serial.println(tempconsigne);
+      
     }
       // kiwi
     else if (String(messageTemp) == "2")  
@@ -159,6 +164,7 @@ void actualisation(String topic,String messageTemp){
 
   if (String(topic) == "ManuPotTemp") {
     tempManu = String(messageTemp).toInt() ;
+    Serial.println(tempManu);
   } 
 
   if (String(topic) == "ManuPotHumi") { 
@@ -169,27 +175,27 @@ void actualisation(String topic,String messageTemp){
     lumiManu = String(messageTemp).toInt();
   }
 
-  if (String(topic) == "ManuBpVoletHaut" && String(messageTemp)== "true") {
+  if (String(topic) == "ManuBpVoletHaut" && String(messageTemp)== "1") {
     volethautManu = 1;
     
   }
-  else if (String(topic) == "ManuBpVoletHaut" && String(messageTemp)== "false"){
+  else if (String(topic) == "ManuBpVoletHaut" && String(messageTemp)== "0"){
     volethautManu = 0;
     
   }
 
-  if (String(topic) == "ManuBpVoletBas" && String(messageTemp)== "true"){
+  if (String(topic) == "ManuBpVoletBas" && String(messageTemp)== "1"){
     voletbasManu =1 ;
   }
-  else if (String(topic) == "ManuBpVoletBas" && String(messageTemp)== "false"){
+  else if (String(topic) == "ManuBpVoletBas" && String(messageTemp)== "0"){
     voletbasManu =0 ;
   }
 
-  if (String(topic) == "ManuBpArrosage" && String(messageTemp)== "true"){
+  if (String(topic) == "ManuBpArrosage" && String(messageTemp)== "1"){
     arrosageManu = 1 ;
   }
 
-  else if  (String(topic) == "ManuBpArrosage" && String(messageTemp)== "false"){
+  else if  (String(topic) == "ManuBpArrosage" && String(messageTemp)== "0"){
     arrosageManu = 0;
   }
 }
@@ -197,11 +203,14 @@ void actualisation(String topic,String messageTemp){
 /*----------------TACHE ModeAuto-----------------*/
 void ModeAuto(void *argp) {
   for (;;) {
+   
+    //lumiactu = map(analogRead(PINLDR),0,4095,0,100);
 //fonction luminosité
     unsigned int temp1 = uxTaskGetStackHighWaterMark(NULL);
     Serial.print("task wifi="); Serial.println(temp1);
   //condition ouvrir volet
   if (-10 < lumiactu - lumiconsigne < 10  && positionVolethaut != 1 ) {
+    Serial.println("VOLETOUVERT");
     digitalWrite(PINLEDVOLETSHAUT,HIGH);
     client.publish("etatvolethaut","1");
     vTaskDelay(12000/ portTICK_PERIOD_MS);
@@ -217,11 +226,13 @@ void ModeAuto(void *argp) {
 
   //condition lampe interieur
   else if (-10 > lumiactu - lumiconsigne > 10 && positionVolethaut != 1) {
+    Serial.println("LAMPEINTERIEUR");
 
     analogWrite(PINLEDLDR,map(lumiconsigne,0,100,0,255));
   }
 
   else if (-10 > lumiactu - lumiconsigne > 10 && positionVolethaut == 1) {
+    Serial.println("LAMPEINTERIEUR");
     digitalWrite(PINLEDVOLETSBAS,HIGH);
     client.publish("etatvoletbas","1");
     vTaskDelay(12000/ portTICK_PERIOD_MS);
@@ -237,23 +248,6 @@ void ModeAuto(void *argp) {
     Serial.println("CHAUFFER");
     int difftempchaud = tempconsigne - tempactu;
     analogWrite(RED,map(difftempchaud,0,30,0,255));
-    
-    /*if (difftemp< 5){
-      analogWrite(RED,80);
-    }
-
-    else if (5<difftemp< 10){
-      analogWrite(RED,160);
-    }
-
-    else if (10 < difftemp){
-      analogWrite(RED,240);
-    }
-
-    else if (difftemp == 0){
-      analogWrite(RED,0);
-    }*/
-
     tempactu++;
     delayMicroseconds(200);
 
@@ -266,19 +260,7 @@ void ModeAuto(void *argp) {
     Serial.println("REFROIDIR");
     int difftempfroid = tempactu - tempconsigne;
     analogWrite(Blue,map(difftempfroid,0,30,0,255));
-    /*if (difftemp > -5){
-      analogWrite(Blue,80);
-    }
 
-    else if (-5> difftemp >-10){
-      analogWrite(Blue,160);
-    }
-    else if (-10 > difftemp){
-      analogWrite(Blue,240);
-    }
-    else if (difftemp == 0){
-      analogWrite(Blue,0);
-    }*/
     tempactu--;
     delayMicroseconds(200);
     
@@ -286,6 +268,7 @@ void ModeAuto(void *argp) {
 
   //fonction humidificateur
   if (humiactu < humiconsigne && humiconsigne > 0){
+    Serial.println("HUMIDIFIE");
     int diffhumi = humiconsigne - humiactu;
     analogWrite(LEDHUMI,map(diffhumi,0,100,0,255));
     humiactu++;
@@ -293,25 +276,32 @@ void ModeAuto(void *argp) {
   }
   //secher
   else if (humiactu > humiconsigne && humiconsigne > 0){
+    Serial.println("SECHER");
     int diffhumisec = humiactu - humiconsigne;
     analogWrite(LEDSEC,map(diffhumisec,0,100,0,255));
     humiactu--;
     delayMicroseconds(350);
   }
   //arrosage
-  for (i = 0;i <= nbrarrosage;i++){
+  int i;
+  
+  if (flagarr == true){
+    for (i = 0 ;i == nbrarrosage;i++){
     analogWrite(LEDHUMI,240);
     client.publish("etatarrosage","1");
     //allumer led arrosage pour 2 sec 
     vTaskDelay(8000/ portTICK_PERIOD_MS);
     client.publish("etatarrosage","0");
-
-  
+    analogWrite(LEDHUMI,0);
+    if ( i == nbrarrosage){
+      flagarr = false;
+    }
   }
+  }
+  
    
     Serial.print("Auto");
-    Serial.print(tempactu);
-    Serial.println(humiactu);
+    
     Serial.println("consigne" + tempconsigne);
     delay(1000);
     } 
@@ -337,10 +327,12 @@ void ModeManu(void *argp) {
     if (arrosageManu == 1){
       analogWrite(LEDHUMI,240);
       client.publish("etatarrosage","1");
+      arrosageManu = 3;
     }
-    else {
+    else if (arrosageManu ==0) {
       analogWrite(LEDHUMI,0);
       client.publish("etatarrosage","0");
+      arrosageManu = 3;
     }
 
     //
@@ -435,6 +427,7 @@ void WifiConnect(void * parameter) {
     Serial.print("task wifi="); Serial.println(temp1);
 
     if(WiFi.status() == WL_CONNECTED){
+      digitalWrite(PINLEDWIFI,HIGH);
       Serial.println("wifi still connected :");
       Serial.print(String(WiFi.localIP()));
       vTaskDelay(10000/ portTICK_PERIOD_MS);
@@ -449,6 +442,7 @@ void WifiConnect(void * parameter) {
   while (WiFi.status() != WL_CONNECTED && millis() -startAttemptTime < WiFi_TIMEOUT_MS){}
 
   if(WiFi.status() != WL_CONNECTED){
+    digitalWrite(PINLEDWIFI,LOW);
     Serial.println("[wifi] FAILED");
     vTaskDelay(20000/ portTICK_PERIOD_MS);
     continue;
@@ -457,85 +451,7 @@ void WifiConnect(void * parameter) {
 }
 
 /*---------------------END FREE RTOS TACHES-------------------*/
-/*void actualisation(String topic,String messageTemp){
 
-  Serial.print("JE SUIS DANS laCTU");
-  if(String(topic) == "FruitTopic"){
-    Serial.print("JE SUIS DANS FRUITOPIC");
-    Serial.print(messageTemp);
-    if (String(messageTemp) == "1"){
-      
-      
-      Serial.print("RENTRE DANS CONSINGE");
-      tempconsigne = 20 ;
-      humiconsigne = 50 ;
-      lumiconsigne = 100 ;
-      nbrarrosage = 2 ;
-      Serial.println(tempconsigne);
-    }
-      // point de consignes
-    else if (String(messageTemp) == "2")  
-      {tempconsigne = 27 ;
-      humiconsigne = 75 ;
-      lumiconsigne = 80 ;
-      nbrarrosage = 1 ;
-      Serial.println(tempconsigne);}
-      // points de consignes
-    else if (String(messageTemp) == "3")  
-      {tempconsigne = 15 ;
-      humiconsigne = 30 ;
-      lumiconsigne = 35 ;
-      nbrarrosage = 1 ;
-      Serial.println(tempconsigne);}
-
-    }
-  
-  //reception mode 
-  if(String(topic) == "ModeActuel" && String(messageTemp)== "true"){ 
-    modemanu = 1; 
-  }
-  else if (String(topic) == "ModeActuel" && String(messageTemp)== "false"){
-    modemanu = 0;
-  }
-
-  //prise des valeurs en mode manu
-
-  if (String(topic) == "ManuPotTemp") {
-    tempManu = String(messageTemp).toInt() ;
-  } 
-
-  if (String(topic) == "ManuPotHumi") { 
-    humiManu = String(messageTemp).toInt();
-  } 
-
-  if (String(topic) == "ManuPotLumi") {
-    lumiManu = String(messageTemp).toInt();
-  }
-
-  if (String(topic) == "ManuBpVoletHaut" && String(messageTemp)== "true") {
-    volethautManu = 1;
-    
-  }
-  else if (String(topic) == "ManuBpVoletHaut" && String(messageTemp)== "false"){
-    volethautManu = 0;
-    
-  }
-
-  if (String(topic) == "ManuBpVoletBas" && String(messageTemp)== "true"){
-    voletbasManu =1 ;
-  }
-  else if (String(topic) == "ManuBpVoletBas" && String(messageTemp)== "false"){
-    voletbasManu =0 ;
-  }
-
-  if (String(topic) == "ManuBpArrosage" && String(messageTemp)== "true"){
-    arrosageManu = 1 ;
-  }
-
-  else if  (String(topic) == "ManuBpArrosage" && String(messageTemp)== "false"){
-    arrosageManu = 0;
-  }
-}*/
 /*-------------------------BEGIN MQTT---------------------------*/
 
 
@@ -555,14 +471,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
 
 /*-------------------------END MQTT---------------------------*/
 
-
- 
-
-  
-
-
-
-
 void setup(){
   Serial.begin(115200);
   // Initialisation of JSON Derulo Object
@@ -579,12 +487,15 @@ void setup(){
   pinMode(LEDHUMI,OUTPUT);
   pinMode(LEDSEC,OUTPUT);
   pinMode(PINLDR,INPUT);
+  pinMode(PINLEDWIFI,OUTPUT);
+  pinMode(LedClient,OUTPUT);
+  pinMode(LedAuto,OUTPUT);
+  pinMode(LedManu,OUTPUT);
+
 
 
   dht.begin();
-  tempactu = 10;//dht.readTemperature();
-  humiactu = 50;//int(dht.readHumidity());
-  lumiactu = 80;//ldr
+
   // Wifi connnect Setup
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   Serial.print("Connecting to Wi-Fi In the SETUP");
@@ -650,15 +561,21 @@ void setup(){
 
 void loop(){
   client.loop();
+  //tempactu = dht.readTemperature();
+  //humiactu = dht.readHumidity();
+
   if (modemanu == 0 && taskGlobal != true ){
-      Serial.println("JACTIVE AUTO");
+      
+      digitalWrite(LedAuto,HIGH);
+      digitalWrite(LedManu,LOW);
        vTaskSuspend(TaskManu);
        vTaskResume(TaskAuto);
        taskGlobal = true;
        
     }
     else if (modemanu == 1 && taskGlobal != false){
-      Serial.println("JACTIVE MANU");
+      digitalWrite(LedAuto,LOW);
+      digitalWrite(LedManu,HIGH);
       vTaskSuspend(TaskAuto);
       vTaskResume(TaskManu);
       taskGlobal = false ;
@@ -673,6 +590,7 @@ void loop(){
       // Attempt to connect
       if (client.connect("Client")) {
         Serial.println("connected");
+        digitalWrite(LedClient,HIGH);
         // Once connected, publish an announcement...
         client.publish("outTopic", "hello world"); // ATTENTION 
         // ... and resubscribe
@@ -695,6 +613,7 @@ void loop(){
         Serial.print("failed, rc=");
         Serial.print(client.state());
         vTaskSuspend(TaskTransmission);
+        digitalWrite(LedClient,LOW);
         Serial.println(" try again in 5 seconds");
         // Wait 5 seconds before retrying
         vTaskDelay(20000/ portTICK_PERIOD_MS);
