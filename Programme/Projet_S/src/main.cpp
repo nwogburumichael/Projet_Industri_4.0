@@ -44,12 +44,14 @@ SemaphoreHandle_t semaphore;
 #define LedManu 33
 #define LedClient 0
 //pin rgb
-#define RED 13
-#define Blue 27
+#define RED 21    //chauffer
+#define Blue 22  //refroidir
+#define PinLEDCLIM 27  
+
 
 //pinhumi
 #define LEDHUMI 4
-#define LEDSEC 15
+#define LEDSEC 19
 
 // Define Firebase Data object
 FirebaseData stream;
@@ -76,6 +78,8 @@ long lumiactu = 40;
 int volethaut; 
 int voletbas ;
 int arrosage ;
+int difftempchaud;
+int difftempfroid;
 
 //variable pour mode auto
 int tempManu;
@@ -85,7 +89,8 @@ int volethautManu;
 int voletbasManu ;
 int arrosageManu = 3 ;
 int lumivolet = 80;
-int u = 0;
+int diffsec;
+int diffhumi;
 
 
 //flag
@@ -209,48 +214,61 @@ void ModeAuto(void *argp) {
     unsigned int temp1 = uxTaskGetStackHighWaterMark(NULL);
     Serial.print("task wifi="); Serial.println(temp1);
   //condition ouvrir volet
-  if (-10 < lumiactu - lumiconsigne < 10  && positionVolethaut != 1 ) {
-    Serial.println("VOLETOUVERT");
+  if (lumiactu == lumiconsigne){
+    digitalWrite(PINLEDVOLETSHAUT,LOW);
+    digitalWrite(PINLEDVOLETSBAS,LOW);
+  }
+  else if (abs(lumiactu - lumiconsigne) < 10  && positionVolethaut != 1 ) {
+    Serial.println("OUVERTUREVOLET");
     digitalWrite(PINLEDVOLETSHAUT,HIGH);
-    client.publish("etatvolethaut","1");
+    client.publish("actionvolethaut","1");
     vTaskDelay(12000/ portTICK_PERIOD_MS);
     digitalWrite(PINLEDVOLETSHAUT,LOW);
-    client.publish("etatvolethaut","0");
-    analogWrite(PINLEDLDR,map(lumivolet,0,100,0,255));
+    client.publish("actionvolethaut","0");
     positionVolethaut = 1;
+    lumiactu = lumiconsigne;
 
   }
-  else if (-10 < lumiactu - lumiconsigne < 10 && positionVolethaut == 1 ) {
-    analogWrite(PINLEDLDR,map(lumivolet,0,100,0,255));
+  else if (abs(lumiactu - lumiconsigne) < 10 && positionVolethaut == 1 ) {
+    //analogWrite(PINLEDLDR,map(lumivolet,0,100,0,255));
   }
 
   //condition lampe interieur
-  else if (-10 > lumiactu - lumiconsigne > 10 && positionVolethaut != 1) {
+  else if (abs(lumiactu - lumiconsigne) > 10 && positionVolethaut != 1) {
     Serial.println("LAMPEINTERIEUR");
 
     analogWrite(PINLEDLDR,map(lumiconsigne,0,100,0,255));
   }
 
-  else if (-10 > lumiactu - lumiconsigne > 10 && positionVolethaut == 1) {
-    Serial.println("LAMPEINTERIEUR");
+  else if (abs(lumiactu - lumiconsigne) > 10 && positionVolethaut == 1) {
+    Serial.println("FERMERVOLET + LAMPE INT");
     digitalWrite(PINLEDVOLETSBAS,HIGH);
-    client.publish("etatvoletbas","1");
+    client.publish("actionvoletbas","1");
     vTaskDelay(12000/ portTICK_PERIOD_MS);
     digitalWrite(PINLEDVOLETSBAS,LOW);
-    client.publish("etatvoletbas","0");
+    client.publish("actionvoletbas","0");
     analogWrite(PINLEDLDR,map(lumiconsigne,0,100,0,255));
     positionVolethaut = 0;
+    lumiactu = lumiconsigne;
   }
 
   //fonction température
   //chauffer&& tempconsigne > 0
-  if (tempactu < tempconsigne && tempconsigne > 0 ){
+  if (tempactu == tempconsigne){
+    digitalWrite(Blue,LOW);
+    digitalWrite(RED,LOW);
+    analogWrite(PinLEDCLIM,0);
+  }
+  else if (tempactu < tempconsigne && tempconsigne > 0 ){
     Serial.println("CHAUFFER");
-    int difftempchaud = tempconsigne - tempactu;
-    analogWrite(RED,map(difftempchaud,0,30,0,255));
+    difftempchaud = tempconsigne - tempactu;
+    digitalWrite(Blue,LOW);
+    digitalWrite(RED,HIGH);
+    analogWrite(PinLEDCLIM,map(difftempchaud,0,30,0,255));
+    client.publish("pTemp",String(difftempchaud).c_str());
+    
     tempactu++;
     delayMicroseconds(200);
-
     
   }
   
@@ -258,27 +276,39 @@ void ModeAuto(void *argp) {
   //refroidir&& tempconsigne > 0
   else if (tempactu > tempconsigne && tempconsigne > 0 ){
     Serial.println("REFROIDIR");
-    int difftempfroid = tempactu - tempconsigne;
-    analogWrite(Blue,map(difftempfroid,0,30,0,255));
-
+    difftempfroid = tempactu - tempconsigne;
+    digitalWrite(RED,LOW);
+    digitalWrite(Blue,HIGH);
+    analogWrite(PinLEDCLIM,map(difftempfroid,0,30,0,255));
+    client.publish("pTemp",String(difftempfroid).c_str());
+    
     tempactu--;
     delayMicroseconds(200);
     
   }
 
   //fonction humidificateur
-  if (humiactu < humiconsigne && humiconsigne > 0){
+  if ( humiactu == humiconsigne){
+    digitalWrite(LEDSEC,LOW);
+    digitalWrite(LEDHUMI,LOW);
+  }
+  else if (humiactu < humiconsigne && humiconsigne > 0){
     Serial.println("HUMIDIFIE");
-    int diffhumi = humiconsigne - humiactu;
-    analogWrite(LEDHUMI,map(diffhumi,0,100,0,255));
+    diffhumi = humiconsigne - humiactu;
+    digitalWrite(LEDSEC,LOW);
+    digitalWrite(LEDHUMI,HIGH);
+    client.publish("pTemp",String(diffhumi).c_str());
+    
     humiactu++;
     delayMicroseconds(350);
   }
   //secher
   else if (humiactu > humiconsigne && humiconsigne > 0){
     Serial.println("SECHER");
-    int diffhumisec = humiactu - humiconsigne;
-    analogWrite(LEDSEC,map(diffhumisec,0,100,0,255));
+    diffsec = humiactu - humiconsigne;
+    digitalWrite(LEDHUMI,LOW);
+    digitalWrite(LEDSEC,HIGH);
+    client.publish("pTemp",String(diffsec).c_str());
     humiactu--;
     delayMicroseconds(350);
   }
@@ -287,12 +317,12 @@ void ModeAuto(void *argp) {
   
   if (flagarr == true){
     for (i = 0 ;i == nbrarrosage;i++){
-    analogWrite(LEDHUMI,240);
-    client.publish("etatarrosage","1");
+
+    client.publish("actionarrosage","1");
     //allumer led arrosage pour 2 sec 
     vTaskDelay(8000/ portTICK_PERIOD_MS);
-    client.publish("etatarrosage","0");
-    analogWrite(LEDHUMI,0);
+    client.publish("actionarrosage","0");
+
     if ( i == nbrarrosage){
       flagarr = false;
     }
@@ -314,53 +344,73 @@ void ModeManu(void *argp) {
     analogWrite(PINLEDLDR,map(lumiManu,0,100,0,255));
     //gestion temp
     //chauffer
-    analogWrite(RED,map(tempManu,15,30,0,245));
+    if (tempManu == 0){
+      digitalWrite(RED,LOW);
+    digitalWrite(Blue,LOW);
+    analogWrite(PinLEDCLIM,0);
+    }
+    else if ( tempManu > 15){
+      digitalWrite(Blue,LOW);
+    digitalWrite(RED,HIGH);
+    
+    analogWrite(PinLEDCLIM,map(tempManu,0,30,0,255));
     //refroidir
-    analogWrite(Blue,map(tempManu,14,0,0,245));
-
+    }
+    else if (0 < tempManu <= 15){
+      digitalWrite(RED,LOW);
+    digitalWrite(Blue,HIGH);
+    analogWrite(PinLEDCLIM,map(tempManu,30,0,0,255));
+    }
+    
     //gestion humi
     //humidife
-    analogWrite(LEDHUMI,map(humiManu,50,100,0,245));
-    //secher
-    analogWrite(LEDSEC,map(humiManu,0,49,0,245));
+    if (humiManu == 0)
+    {
+     digitalWrite(LEDHUMI,LOW);
+    digitalWrite(LEDSEC,LOW);
+    }
+    else if (humiManu > 50 ){
+      digitalWrite(LEDSEC,LOW);
+      digitalWrite(LEDHUMI,HIGH);
+    }
+    else if (0 < humiManu <= 50)
+    {
+     digitalWrite(LEDHUMI,LOW);
+    digitalWrite(LEDSEC,HIGH);
+    }
+
+
     
-    if (arrosageManu == 1){
-      analogWrite(LEDHUMI,240);
-      client.publish("etatarrosage","1");
-      arrosageManu = 3;
-    }
-    else if (arrosageManu ==0) {
-      analogWrite(LEDHUMI,0);
-      client.publish("etatarrosage","0");
-      arrosageManu = 3;
-    }
+
 
     //
-    if (volethautManu == 1 && positionVolethaut !=1){
-      analogWrite(PINLEDVOLETSHAUT,HIGH);
-      client.publish("etatvolethaut","1");
-      vTaskDelay(12000/ portTICK_PERIOD_MS);
-      analogWrite(PINLEDVOLETSHAUT,LOW);
-      client.publish("etatvolethaut","0");
-      analogWrite(PINLEDLDR,map(lumivolet,0,100,0,255));
-      positionVolethaut = 1 ;
-    }
-    else if (volethautManu == 1 && positionVolethaut !=0){
-      //ecrire que le volet est deja en position haut
-    }
+    if (volethautManu == 1){
+      digitalWrite(PINLEDVOLETSBAS,LOW);
+      digitalWrite(PINLEDVOLETSHAUT,HIGH);
+      client.publish("actionvolethaut","1");
 
-    if (voletbasManu == 1 && positionVolethaut != 1){
-      //ecrire que le volet est deja en position bas
+      vTaskDelay(4000/ portTICK_PERIOD_MS);
+      volethautManu == 0;
+      //digitalWrite(PINLEDVOLETSHAUT,LOW);
+      //client.publish("actionvolethaut","0");
+      //positionVolethaut = 1 ;
     }
+    //else if (volethautManu == 1 && positionVolethaut !=0){
+      //ecrire que le volet est deja en position haut
+    //}
+
+    //if (voletbasManu == 1 && positionVolethaut != 1){
+      //ecrire que le volet est deja en position bas
+    //}
   //ferme le volet
-    else if (voletbasManu == 1 && positionVolethaut != 0){
-      analogWrite(PINLEDVOLETSBAS,HIGH);
-      client.publish("etatvoletbas","1");
-      vTaskDelay(12000/ portTICK_PERIOD_MS);
-      analogWrite(PINLEDVOLETSBAS,LOW);
-      client.publish("etatvoletbas",0);
-      analogWrite(PINLEDLDR,0);
-      positionVolethaut = 0;
+    else if (voletbasManu == 1 ){
+      digitalWrite(PINLEDVOLETSHAUT,LOW);
+      digitalWrite(PINLEDVOLETSBAS,HIGH);
+      client.publish("actionvoletbas","1");
+      voletbasManu = 0;
+    
+
+      //positionVolethaut = 0;
     }
     //delay(500);
     //Serial.print("Manu");
@@ -377,6 +427,7 @@ void Transmission(void *argp) {
   String output;
   serializeJson(doc2, output);
   client.publish("donnees",output.c_str());
+
   //transmission toute les secondes, une fois connecter
   vTaskDelay(4000/ portTICK_PERIOD_MS);
   }
@@ -491,8 +542,17 @@ void setup(){
   pinMode(LedClient,OUTPUT);
   pinMode(LedAuto,OUTPUT);
   pinMode(LedManu,OUTPUT);
+  pinMode(PinLEDCLIM,OUTPUT);
 
-
+digitalWrite(RED,HIGH);
+digitalWrite(Blue,HIGH);
+digitalWrite(LEDSEC,HIGH);
+digitalWrite(LEDHUMI,HIGH);
+delay(2000);
+digitalWrite(RED,LOW);
+digitalWrite(Blue,LOW);
+digitalWrite(LEDSEC,LOW);
+digitalWrite(LEDHUMI,LOW);
 
   dht.begin();
 
@@ -561,11 +621,17 @@ void setup(){
 
 void loop(){
   client.loop();
-  //tempactu = dht.readTemperature();
-  //humiactu = dht.readHumidity();
+  if (modemanu == 1){
+    tempactu = dht.readTemperature();
+    humiactu = dht.readHumidity(); 
+    lumiactu = map(analogRead(PINLDR),0,4095,0,100);
+  }
+  
 
   if (modemanu == 0 && taskGlobal != true ){
-      
+      tempactu = 19;
+      humiactu = 55; 
+      lumiactu = 40;
       digitalWrite(LedAuto,HIGH);
       digitalWrite(LedManu,LOW);
        vTaskSuspend(TaskManu);
@@ -574,6 +640,7 @@ void loop(){
        
     }
     else if (modemanu == 1 && taskGlobal != false){
+
       digitalWrite(LedAuto,LOW);
       digitalWrite(LedManu,HIGH);
       vTaskSuspend(TaskAuto);
