@@ -10,6 +10,7 @@
 #include <DHT.h>
 #include <ArduinoJson.h>
 #include <Firebase_ESP_Client.h>
+#include <TFT_eWidget.h>  // Widget library
 
 // #include "Final_Frontier_28.h"
 #define AA_FONT_SMALL "NotoSans-Bold.ttf"
@@ -66,12 +67,15 @@ bool togVoletH = false;
 bool togVoletL = false;
 bool togLum = false;
 bool changement = false;
-String modeActuel = "None";
+String modeActuel = "Manu";
 String etatmode = "false";
 String fruitChoisi = "None";
-String  tempActuel = "0";
+String tempActuel = "0";
 String humiActuel = "0";
-String lumiActuel = "0";
+String lumiActuel = "0"; 
+String etatarrosage = "0";
+
+int couleursFond = 153255255;
 
 /*---------------------BEGIN FREE RTOS TACHES-------------------*/
 /*---------------------TASK CORE 1-------------------*/
@@ -131,8 +135,9 @@ void WifiConnect(void * parameter) {
 }
 /*---------------------END FREE RTOS TACHES-------------------*/
 void TFToled(){
+
   tft.setTextSize(1);
-  tft.setTextColor(TFT_WHITE,179197230,true);
+  tft.setTextColor(TFT_WHITE,couleursFond,true);
 
   tft.setCursor(0, 100);
   tft.print("Mode : ");
@@ -157,6 +162,10 @@ void TFToled(){
   tft.setCursor(0, 50);
   tft.print("Fruit Choisi : ");
   tft.print(String(fruitChoisi));
+
+  tft.setCursor(0, 60);
+  tft.print("Etat arossage : ");
+  tft.print(etatarrosage);
 }
 
 void actualisation(String topic,String messageTemp){
@@ -164,7 +173,7 @@ void actualisation(String topic,String messageTemp){
   if(String(topic) == "FruitTopic" ){
     if (messageTemp == "1"){fruitChoisi = "fraise";}
     else if (messageTemp == "2"){fruitChoisi = "kiwi";}
-    else if (messageTemp == "3"){fruitChoisi = "fraise";}
+    else if (messageTemp == "3"){fruitChoisi = "Cerise";}
   }
 
   //reception mode 
@@ -192,19 +201,35 @@ void actualisation(String topic,String messageTemp){
     lumiActuel = messageTemp;
   }
 
-  if (String(topic) == "etatarrosage"){
-    if(messageTemp == "1") {analogWrite(ledArossage,255);}
-    else if(messageTemp == "0"){analogWrite(ledArossage,0);}
-  }
+    if (String(topic) == "etatLumi" || String(topic) == "pLumi"){
+      analogWrite(ledLum,map(messageTemp.toInt(),0,100,0,255));
+    }
 
+    if (String(topic) == "etatTemp" || String(topic) == "pTemp" ){
+      analogWrite(ledTemp,map(messageTemp.toInt(),0,30,0,255));
+
+    }
+
+
+    if (String(topic) == "etatHumi" || String(topic) == "pHumi"){
+      analogWrite(ledArossage,map(messageTemp.toInt(),0,100,0,255));
+    }
+
+  
   if (String(topic) == "etatvolethaut" ) {
     if(messageTemp == "1"){digitalWrite(ledVoletH,HIGH);}
     else if(messageTemp == "0"){digitalWrite(ledVoletH,LOW);}
   }
     
   if (String(topic) == "etatvoletbas"){
-    if(messageTemp == "1"){digitalWrite(ledVoletL,HIGH);}
-    else if(messageTemp == "0"){digitalWrite(ledVoletL,LOW);}
+    if(messageTemp == "1"){digitalWrite(ledVoletL,HIGH);
+    Serial.print("je desend");}
+    else if(messageTemp == "0"){digitalWrite(ledVoletL,LOW);
+    Serial.print("je desend plus");}
+  }
+
+  if (String(topic) == "etatarrosage"){
+   etatarrosage = messageTemp;
   }
   TFToled();
 }
@@ -253,8 +278,7 @@ if (modeActuel == "Manu"){
   if(digitalRead(bpArossage) == LOW){
     togArossage = !togArossage;
     doc2["BpHumi"] = String(togArossage);
-    doc2["PotHumi"] = analogRead(potArossage);
-    analogWrite(ledArossage,map(analogRead(potArossage),0,4095,0,255));
+    doc2["PotHumi"] = map(analogRead(potArossage),0,4095,0,100);
     transmission();
     }
   
@@ -262,21 +286,20 @@ if (modeActuel == "Manu"){
     togLum = !togLum;
     doc2["PotLum"] = map(analogRead(potLumi),0,4095,0,100);
     doc2["PotTemp"] = map(analogRead(potTemp),0,4095,0,30);
-    analogWrite(ledLum,map(analogRead(potLumi),0,4095,0,255));
-    analogWrite(ledTemp,map(analogRead(potTemp),0,4095,0,255));
-    Serial.print("je suis dans la cond");
     transmission();}
 
   if(digitalRead(bpVoletH) == LOW){
     togVoletH = !togVoletH;
     doc2["BpVoletHaut"] = String(togVoletH);
+    doc2["BpVoletBas"] = "0";
     transmission();}
 
   if(digitalRead(bpVoletL) == LOW){
     togVoletL = !togVoletL;
+    doc2["BpVoletHaut"] = "0";
     doc2["BpVoletBas"] = String(togVoletL);
     transmission();}
-  delay(250);
+  delay(350);
 }
 }
 
@@ -306,7 +329,26 @@ void setup(void) {
   pinMode(ledLum,OUTPUT);
   pinMode(ledTemp,OUTPUT);
   pinMode(statutWifi,OUTPUT);
- 
+
+  digitalWrite(ledArossage,HIGH);
+  digitalWrite(ledAuto,HIGH);
+  digitalWrite(ledManu,HIGH);
+  digitalWrite(ledVoletH,HIGH);
+  digitalWrite(ledVoletL,HIGH);
+  digitalWrite(ledLum,HIGH);
+  digitalWrite(ledTemp,HIGH);
+  digitalWrite(statutWifi,HIGH);
+  delay(2000);
+
+  digitalWrite(ledArossage,LOW);
+  digitalWrite(ledAuto,LOW);
+  digitalWrite(ledManu,LOW);
+  digitalWrite(ledVoletH,LOW);
+  digitalWrite(ledVoletL,LOW);
+  digitalWrite(ledLum,LOW);
+  digitalWrite(ledTemp,LOW);
+  digitalWrite(statutWifi,LOW);
+
   /*-----SETUP OLED-----*/
   tft.init();
   tft.setRotation(1);
@@ -347,7 +389,7 @@ void setup(void) {
   // Wrap test at right and bottom of screen
   tft.setTextWrap(true, true);
   // Font and background colour, background colour is used for anti-alias blending
-  tft.setTextColor(TFT_BLUE, 179197230,true);
+  tft.setTextColor(TFT_BLUE,couleursFond ,true);
   tft.setCursor(0, 0);
   tft.setTextSize(1);
   tft.print("Serre Timon Michael 2022-2023");
@@ -385,11 +427,17 @@ void loop() {
         client.subscribe("etatvolethaut");
         client.subscribe("etatvoletbas");
         client.subscribe("etatarrosage");
+        client.subscribe("etatTemp");
+        client.subscribe("etatLumi");
+        client.subscribe("etatHumi");
         client.subscribe("ModeActuel");
         client.subscribe("TempActuel");
         client.subscribe("HumiActuel");
         client.subscribe("LumiActuel");
         client.subscribe("FruitTopic");
+        client.subscribe("pHumi");
+        client.subscribe("pLumi");
+        client.subscribe("pTemp");
       } 
       else {
         Serial.print("failed, rc=");
